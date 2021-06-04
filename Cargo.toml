@@ -7,5 +7,6 @@ edition = "2018"
 
 [dependencies]
 chrono = "0.4.19"
+iced = { version = "0.3", features = [ "tokio" ] }
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "sqlite", "macros", "chrono" ] }
 tokio = { version = "1", features = ["full"] }
