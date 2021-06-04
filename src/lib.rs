@@ -17,7 +17,7 @@ impl Category {
         .await
     }
 
-    pub async fn fetch_all(executor: &SqlitePool) -> Result<Vec<Self>> {
+    pub async fn all(executor: &SqlitePool) -> Result<Vec<Self>> {
         sqlx::query_as!(Self, r#"select * from category"#)
             .fetch_all(executor)
             .await
@@ -55,7 +55,7 @@ impl Task {
         .await
     }
 
-    pub async fn fetch_all(executor: &SqlitePool) -> Result<Vec<Self>> {
+    pub async fn all(executor: &SqlitePool) -> Result<Vec<Self>> {
         sqlx::query_as!(Self, r#"select * from task"#)
             .fetch_all(executor)
             .await
