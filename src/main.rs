@@ -1,16 +1,12 @@
-use chronology::Category;
+use chronology::Entry;
 use sqlx::{Result, SqlitePool};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let pool = SqlitePool::connect("sqlite:chronology.db").await?;
 
-    let category = Category::get(&pool, 1).await?;
-
-    dbg!(&category);
-
-    for task in category.tasks(&pool).await? {
-        dbg!(task);
+    for entry in Entry::all(&pool).await? {
+        dbg!(entry);
     }
 
     Ok(())
