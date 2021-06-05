@@ -1,3 +1,5 @@
+pub mod web;
+
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::{Result, SqlitePool};
