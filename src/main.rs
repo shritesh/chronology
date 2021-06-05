@@ -1,98 +1,40 @@
 use chronology::Category;
-use iced::{Application, Command, Settings, Text};
-use sqlx::{Error, Result, SqlitePool};
+use rocket::{
+    fairing::{self, AdHoc},
+    get,
+    response::Debug,
+    serde::json::Json,
+    Build, Rocket, State,
+};
+use sqlx::SqlitePool;
 
-struct State {
-    pool: SqlitePool,
-    categories: Option<Vec<Category>>,
+type Result<T, E = Debug<sqlx::Error>> = std::result::Result<T, E>;
+
+#[get("/categories")]
+async fn list_categories(db: &State<SqlitePool>) -> Result<Json<Vec<Category>>> {
+    let categories = Category::all(&**db).await?;
+    Ok(Json(categories))
 }
 
-enum Ui {
-    Loading,
-    Loaded(State),
-    Error(Error),
+#[get("/categories/<id>")]
+async fn get_category(db: &State<SqlitePool>, id: i64) -> Result<Option<Json<Category>>> {
+    let category = Category::get(&**db, id).await?;
+    Ok(category.map(Json))
 }
 
-#[derive(Debug)]
-enum Msg {
-    Init(Result<SqlitePool>),
-
-    FetchCategoryAll(Result<Vec<Category>>),
+#[rocket::launch]
+fn rocket() -> _ {
+    rocket::build()
+        .attach(AdHoc::try_on_ignite("SQLx connection", init_database))
+        .mount("/", rocket::routes![list_categories, get_category])
 }
 
-impl Application for Ui {
-    type Executor = iced::executor::Default;
-
-    type Message = Msg;
-
-    type Flags = ();
-
-    fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        (
-            Ui::Loading,
-            Command::perform(SqlitePool::connect("sqlite:chronology.db"), Msg::Init),
-        )
-    }
-
-    fn title(&self) -> String {
-        "Chronology".to_string()
-    }
-
-    fn update(
-        &mut self,
-        message: Self::Message,
-        _clipboard: &mut iced::Clipboard,
-    ) -> Command<Self::Message> {
-        match self {
-            Ui::Loading => match message {
-                Msg::Init(Ok(pool)) => {
-                    *self = Ui::Loaded(State {
-                        pool: pool.clone(),
-                        categories: None,
-                    });
-                    Command::perform(Category::all(pool), Msg::FetchCategoryAll)
-                }
-                Msg::Init(Err(err)) => {
-                    *self = Ui::Error(err);
-
-                    Command::none()
-                }
-                _ => Command::none(),
-            },
-
-            Ui::Loaded(state) => match message {
-                Msg::Init(_) => panic!("Impossible"),
-                Msg::FetchCategoryAll(Ok(categories)) => {
-                    state.categories = Some(categories);
-                    Command::none()
-                }
-                Msg::FetchCategoryAll(Err(err)) => {
-                    *self = Ui::Error(err);
-                    Command::none()
-                }
-            },
-
-            Ui::Error(_) => Command::none(),
+async fn init_database(rocket: Rocket<Build>) -> fairing::Result {
+    match SqlitePool::connect("sqlite:chronology.db").await {
+        Ok(pool) => Ok(rocket.manage(pool)),
+        Err(e) => {
+            rocket::error!("Failed to connect to database: {}", e);
+            Err(rocket)
         }
     }
-
-    fn view(&mut self) -> iced::Element<'_, Self::Message> {
-        let label = match &self {
-            Ui::Loading => "Loading".to_string(),
-            Ui::Loaded(state) => {
-                if let Some(ref categories) = state.categories {
-                    format!("{} categories", categories.len())
-                } else {
-                    format!("No categories found")
-                }
-            }
-            Ui::Error(err) => err.to_string(),
-        };
-
-        Text::new(label).into()
-    }
-}
-
-fn main() -> iced::Result {
-    Ui::run(Settings::default())
 }
