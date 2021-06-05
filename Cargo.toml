@@ -10,3 +10,4 @@ chrono = "0.4.19"
 rocket = { git = "https://github.com/SergioBenitez/Rocket", features = [ "json" ] }
 serde = { version = "1.0", features = ["derive"] }
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "sqlite", "macros", "chrono" ] }
+tokio = { version = "1.0", features = [ "full" ] }
